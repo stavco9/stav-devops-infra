@@ -1,0 +1,40 @@
+
+# Url to access prometheus
+prometheus:
+  # Value is templated
+  url: http://prometheus-server.monitoring.svc
+  port: 80
+  path: ""
+
+resources:
+  requests:
+    cpu: 300m
+    memory: 512Mi
+  limits:
+    cpu: 300m
+    memory: 512Mi
+
+rules:
+  default: true
+
+  custom:
+  - seriesQuery: 'sessions_counter'
+    resources:
+      overrides:
+        kubernetes_namespace:
+          resource: namespace
+        kubernetes_pod_name:
+          resource: pod
+    name:
+      matches: "^(.*)_total"
+      as: "${1}_per_second"
+    metricsQuery: (sum(sessions_counter))
+
+#tls:
+#  enable: false
+#  ca: |-
+#    # Public CA file that signed the APIService
+#  key: |-
+#    # Private key of the APIService
+#  certificate: |-
+#    # Public key of the APIService
