@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "flask-sample.name" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "flask-sample.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.autoscaling.minPods }} 
+  selector:
+    matchLabels:
+      {{- include "flask-sample.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- if include "flask-sample.deployment.annotations" . }}
+      annotations:
+        {{- include "flask-sample.deployment.annotations" . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "flask-sample.selectorLabels" . | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "flask-sample.name" . }}
+      containers:
+        - name: {{ include "flask-sample.name" . }}
+          image: "{{ .Values.registryBasePath }}/{{ .Values.microservice.name }}:{{ .Values.microservice.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: Always
+          env:
+          - name: ENVIRONMENT
+            value: {{ .Values.microservice.environment | upper }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.microservice.port }}
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.microservice.healthCheckPath }}
+              port: http
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.microservice.healthCheckPath }}
+              port: http
+          resources:
+            limits:
+              memory: {{ .Values.resources.memory }}
+              cpu: {{ .Values.resources.cpu }}
+            requests:
+              memory: {{ .Values.resources.memory }}
+              cpu: {{ .Values.resources.cpu }}

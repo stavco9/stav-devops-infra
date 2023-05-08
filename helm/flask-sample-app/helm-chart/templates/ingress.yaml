@@ -1,0 +1,28 @@
+{{- if .Values.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "flask-sample.name" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "flask-sample.labels" . | nindent 4 }}
+  annotations:
+    {{- include "flask-sample.ingress.annotations" . | nindent 4 }}
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+      - "{{ .Values.microservice.name }}-{{ .Values.microservice.environment }}.{{ include "flask-sample.basek8sdomain" . }}"
+      secretName: "tls-{{- include "flask-sample.name" . }}"
+  rules:
+  - host: "{{ .Values.microservice.name }}-{{ .Values.microservice.environment }}.{{ include "flask-sample.basek8sdomain" . }}"
+    http:
+      paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: {{ include "flask-sample.name" . }}
+              port:
+                number: {{ .Values.microservice.port }}
+{{- end }}

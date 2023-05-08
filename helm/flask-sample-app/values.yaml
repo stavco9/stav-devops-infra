@@ -1,0 +1,35 @@
+# Global variables
+microservice:
+  name: stav-poc
+  tag: "1.0"
+  environment: dev
+  port: 3000
+  healthCheckPath: /hello
+
+resources:
+  memory: 128Mi
+  cpu: 100m
+
+autoscaling:
+  enabled: true
+  minPods: 1
+  maxPods: 10
+  cpu:
+    enabled: false
+    percentage: 90
+  memory:
+    enabled: false
+    precentage: 70
+  customMetrics:
+  - name: sessions_counter
+    threshold: 2
+
+prometheusMetrics:
+  enabled: true
+
+# Image variables
+registryBasePath: 882709358319.dkr.ecr.us-east-1.amazonaws.com
+
+# If enableing ingress, the external URL will be https://{{ microserviceName }}-{{ environment }}.k8s.stavco9.com
+ingress:
+  enabled: true

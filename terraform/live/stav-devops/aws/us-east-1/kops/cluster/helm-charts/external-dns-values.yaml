@@ -1,0 +1,7 @@
+provider: aws
+sources:
+- ingress
+domainFilters:
+- stavco9.com
+extraArgs:
+- --aws-zone-type=public

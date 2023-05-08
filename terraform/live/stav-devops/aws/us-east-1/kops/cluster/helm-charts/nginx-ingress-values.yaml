@@ -1,0 +1,16 @@
+controller:
+  replicaCount: 2
+  service:
+    labels:
+      app.kubernetes.io/instance: nginx-ingress-nginx-ingress
+      app.kubernetes.io/name: nginx-ingress-nginx-ingress
+    annotations:
+      service.beta.kubernetes.io/aws-load-balancer-type: external
+      service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: instance
+      service.beta.kubernetes.io/aws-load-balancer-scheme: internet-facing
+  extraArgs:
+    enable-latency-metrics: true
+  enableCertManager: true
+  enableExternalDNS: true
+  metrics:
+    enabled: true
