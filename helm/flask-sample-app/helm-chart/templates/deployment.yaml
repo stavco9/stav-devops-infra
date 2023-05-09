@@ -27,6 +27,10 @@ spec:
           env:
           - name: ENVIRONMENT
             value: {{ .Values.microservice.environment | upper }}
+          - name: MICROSERVICE
+            value: {{ .Values.microservice.name }}
+          - name: LOG_LEVEL
+            value: {{ .Values.microservice.logLevel }}
           ports:
             - name: http
               containerPort: {{ .Values.microservice.port }}

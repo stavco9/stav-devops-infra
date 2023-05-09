@@ -5,6 +5,7 @@ microservice:
   environment: dev
   port: 3000
   healthCheckPath: /hello
+  logLevel: INFO
 
 resources:
   memory: 128Mi
