@@ -1,0 +1,4 @@
+# Global variables
+namespace:
+  environment: dev
+  project: flask-sample
