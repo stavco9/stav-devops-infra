@@ -1,0 +1,4 @@
+# Global variables
+namespace:
+  environment: qa
+  project: flask-sample

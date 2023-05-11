@@ -1,0 +1,52 @@
+server:
+  alertmanagers:
+  - scheme: http
+    static_configs:
+    - targets:
+        - "prometheus-alertmanager.monitoring.svc:9093"
+
+serverFiles:
+  alerting_rules.yml:
+    groups:
+    - name: Instances
+      rules:
+      - alert: InstanceDown
+        expr: up == 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          description: '{{ $labels.instance }} of job {{ $labels.job }} has been down for more than 5 minutes.'
+          summary: 'Instance {{ $labels.instance }} down'
+      - alert: KubernetesPodCrashLooping
+        expr: increase(kube_pod_container_status_restarts_total[1m]) > 3
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: Kubernetes pod crash looping (instance {{ $labels.instance }})
+          description: "Pod {{ $labels.pod }} is crash looping\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+      - alert: HostOutOfMemory
+        expr: (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes * 100 < 30) * on(instance) group_left (nodename) node_uname_info{nodename=~".+"}
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: Host out of memory (instance {{ $labels.instance }})
+          description: "Node memory is filling up (< 10% left)\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
+alertmanager:
+  config:
+    global:
+      resolve_timeout: 1m
+      slack_api_url: '-----'
+    route:
+      group_by: ['alertname']
+      group_wait: 10s
+      group_interval: 5m
+      receiver: stav-notifications
+      repeat_interval: 3h
+    receivers:
+    - name: 'stav-notifications'
+      slack_configs:
+      - channel: '#stav-devops'

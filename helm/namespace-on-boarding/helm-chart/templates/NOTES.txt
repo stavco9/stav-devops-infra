@@ -1,0 +1,1 @@
+This chart configures a namespace by the required resources

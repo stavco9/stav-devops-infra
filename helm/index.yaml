@@ -3,12 +3,12 @@ entries:
   flask-sample:
   - apiVersion: v2
     appVersion: 1.0.0
-    created: "2023-05-09T17:58:05.6000638+03:00"
+    created: "2023-05-11T10:24:49.563715+03:00"
     description: Flask sample application for deployment
-    digest: 58f4a60c2acf1ef6ea0dcbbd8a16b5903ca34fdfaafae78d32ab0e3ef978189f
+    digest: af1e3fc010f6f49f7c564ef7f3931bc779f41868699bc9474aa4d9d223554afc
     name: flask-sample
     type: application
     urls:
     - https://stavco9.github.io/stav-devops-infra/helm/flask-sample-0.1.0.tgz
     version: 0.1.0
-generated: "2023-05-09T17:58:05.5993208+03:00"
+generated: "2023-05-11T10:24:49.5630329+03:00"
