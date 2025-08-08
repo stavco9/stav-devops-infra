@@ -7,5 +7,5 @@ output "sbd_ai_mongodb_cluster" {
 }
 
 output "sbd_ai_mongodb_connection_string" {
-  value = mongodbatlas_cluster.sbd_ai[0].connection_strings
+  value = length(mongodbatlas_cluster.sbd_ai) > 0 ? mongodbatlas_cluster.sbd_ai[0].connection_strings : null
 }

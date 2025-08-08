@@ -25,3 +25,7 @@ output "private_db_subnet_group" {
 output "public_db_subnet_group" {
   value = aws_db_subnet_group.rds_vpc_public.name
 }
+
+output "vpc_endpoints" {
+  value = module.vpc_endpoints.endpoints
+}

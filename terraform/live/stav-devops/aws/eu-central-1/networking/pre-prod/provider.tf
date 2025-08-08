@@ -4,15 +4,11 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 6.0"
     }
-    mongodbatlas = {
-      source = "mongodb/mongodbatlas"
-      version = "~> 1.0"
-    }
   }
 
   backend "s3" {
     bucket = "882709358319-terraform-state"
-    key    = "eu-central-1/sbd-ai/prod/terraform.tfstate"
+    key    = "eu-central-1/networking/pre-prod/terraform.tfstate"
     dynamodb_table = "tf-state-lock"
     profile = "stav-devops"
     region = "us-east-1"
@@ -23,9 +19,4 @@ terraform {
 provider "aws" {
   profile = "stav-devops"
   region = "eu-central-1"
-}
-
-provider "mongodbatlas" {
-  public_key = var.mongodbatlas_public_key
-  private_key = var.mongodbatlas_private_key
 }

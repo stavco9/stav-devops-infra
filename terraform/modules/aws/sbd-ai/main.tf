@@ -4,8 +4,8 @@ locals {
   tags = {
     Environment = local.environment
     Region = local.current_region
-    Project = "sbd-ai"
-    Owner = "stav-devops"
+    Project = var.project
+    Owner = var.project
     ManagedBy = "terraform"
   }
 
@@ -17,8 +17,8 @@ locals {
   mongodbatlas_cloud_provider = "AWS"
   mongodbatlas_instance_size = "M0"
 
-  sbd_ai_videos_bucket = format("%s-%s-sbdai-videos-%s", local.current_account_id, local.current_region, local.environment)
-  sbd_ai_mongodb_cluster = format("sbdai-mongodb-%s", local.environment)
+  sbd_ai_videos_bucket = format("%s-%s-%s-videos-%s", local.current_account_id, local.current_region, var.project, local.environment)
+  sbd_ai_mongodb_cluster = format("%s-mongodb-%s", var.project, local.environment)
 }
 
 data "aws_caller_identity" "account_id" {}

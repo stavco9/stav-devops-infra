@@ -2,6 +2,7 @@ module "sbd_ai" {
   source = "../../../../../../modules/aws/sbd-ai"
 
   environment = "dev"
+  project = "sbdai"
   create_bucket = true
   create_mongodb_cluster = true
   mongodb_iam_roles_access = [
