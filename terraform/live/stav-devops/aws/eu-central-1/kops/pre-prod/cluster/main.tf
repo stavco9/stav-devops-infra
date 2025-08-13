@@ -1,0 +1,82 @@
+locals {
+  project = "stav-devops"
+  environment = "pre-prod"
+  aws_profile = "stav-devops"
+  aws_region = data.aws_region.current_region.name
+  aws_account_id = data.aws_caller_identity.current_account_id.account_id
+  remote_state_dynamodb_table = "tf-state-lock"
+  remote_state_bucket = format("%s-terraform-state", local.aws_account_id)
+  remote_state_region = "us-east-1"
+  remote_state_networking_key = format("%s/networking/%s/terraform.tfstate", local.aws_region, local.environment)
+  remote_state_iam_key = "iam/terraform.tfstate"
+  remote_state_kops_key = format("%s/kops/%s/terraform.tfstate", local.aws_region, local.environment)
+}
+
+data "terraform_remote_state" "networking" {
+  backend = "s3"
+
+  config = {
+    bucket = local.remote_state_bucket
+    key    = local.remote_state_networking_key
+    dynamodb_table = local.remote_state_dynamodb_table
+    profile = local.aws_profile
+    region = local.remote_state_region
+  }
+}
+
+data "terraform_remote_state" "iam" {
+  backend = "s3"
+
+  config = {
+    bucket = local.remote_state_bucket
+    key    = local.remote_state_iam_key
+    dynamodb_table = local.remote_state_dynamodb_table
+    profile = local.aws_profile
+    region = local.remote_state_region
+  }
+}
+
+data "terraform_remote_state" "kops" {
+  backend = "s3"
+
+  config = {
+    bucket = local.remote_state_bucket
+    key    = local.remote_state_kops_key
+    dynamodb_table = local.remote_state_dynamodb_table
+    profile = local.aws_profile
+    region = local.remote_state_region
+  }
+}
+
+data "aws_region" "current_region" {}
+data "aws_caller_identity" "current_account_id" {}
+
+module "kops_cluster" {
+   source = "../../../../../../../modules/aws/kops//cluster"
+  
+   project = local.project
+   environment = local.environment
+   kubernetes_version = "1.32.0"
+
+   vpc_id = data.terraform_remote_state.networking.outputs.vpc_id
+   public_subnet_ids = data.terraform_remote_state.networking.outputs.public_subnet_ids
+   private_subnet_ids = data.terraform_remote_state.networking.outputs.private_subnet_ids
+
+   kops_state_bucket = data.terraform_remote_state.kops.outputs.kops_state_bucket_name
+   public_key_file_path = data.terraform_remote_state.kops.outputs.public_key_path
+
+   kubernetes_master_policies = data.terraform_remote_state.iam.outputs.kubernetes_master_policies
+   kubernetes_nodes_policies = data.terraform_remote_state.iam.outputs.kubernetes_nodes_policies
+
+   cluster_admin_iam_roles = ["arn:aws:iam::882709358319:role/aws-reserved/sso.amazonaws.com/AWSReservedSSO_AdministratorAccess_eeb2dd0cf1e87c29"]
+
+   ec2_instance_type = "t3.small"
+
+   dns_zone = "stavco9.com"
+
+   ## At first time of cluster creation, all these must be set to false
+   enable_irsa = true
+   enable_aws_load_balancer_controller = true
+   enable_karpenter = true
+   enable_pod_identity_webhook = true
+}

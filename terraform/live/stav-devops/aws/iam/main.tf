@@ -1,6 +1,11 @@
 locals {
   ecr_pusher_policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryFullAccess"
+  ssm_policy = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
   ecr_pusher_user = "Stav-DevOps-ECR-Pusher"
+}
+
+data "http" "load_balancer_controller_policy" {
+  url = "https://raw.githubusercontent.com/kubernetes-sigs/aws-load-balancer-controller/v2.1.2/docs/install/iam_policy.json"
 }
 
 resource "aws_iam_user" "ecr_pusher" {
@@ -26,4 +31,19 @@ resource "aws_secretsmanager_secret_version" "ecr_pusher" {
     "AWS_ACCESS_KEY_ID" = aws_iam_access_key.ecr_pusher.id,
     "AWS_SECRET_ACCESS_KEY" = aws_iam_access_key.ecr_pusher.secret
   })
+}
+
+resource "aws_iam_policy" "load_balancer_controller_policy" {
+  name = "AWSLoadBalancerControllerIAMPolicy"
+  policy = data.http.load_balancer_controller_policy.response_body
+}
+
+resource "aws_iam_policy" "external_dns_policy" {
+  name = "AllowExternalDNSUpdates"
+  policy = file("./route53-permissions.json")
+}
+
+resource "aws_iam_policy" "kubernetes_karpenter_policy" {
+  name = "KubernetesKarpenterPolicy"
+  policy = file("./karpenter-permissions.json")
 }
