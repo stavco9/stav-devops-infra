@@ -79,4 +79,17 @@ module "kops_cluster" {
    enable_aws_load_balancer_controller = true
    enable_karpenter = true
    enable_pod_identity_webhook = true
+   enable_ack_controller = true
+   enable_rabbitmq_operator = true
+
+   ack_iam_controller_policy = data.terraform_remote_state.iam.outputs.ack_iam_controller_policy
+   ack_iam_controller_version = "1.5.0"
+   ack_s3_controller_policy = data.terraform_remote_state.iam.outputs.ack_s3_controller_policy
+   ack_s3_controller_version = "1.1.0"
+   rabbitmq_operator_version = "4.4.32"
+
+   turn_off_cluster_at_night = true
+   turn_off_cluster_at_night_time_zone = "Asia/Jerusalem"
+   turn_off_nodes_at_night_recurrence = "0 22 * * *"
+   turn_off_master_at_night_recurrence = "0 23 * * *"
 }

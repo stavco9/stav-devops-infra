@@ -81,3 +81,58 @@ variable "enable_pod_identity_webhook" {
   type = bool
   default = false
 }
+
+variable "enable_ack_controller" {
+  type = bool
+  default = false
+}
+
+variable "enable_rabbitmq_operator" {
+  type = bool
+  default = false
+}
+
+variable "rabbitmq_operator_version" {
+  type = string
+  default = "4.4.32"
+}
+
+variable "ack_iam_controller_version" {
+  type = string
+  default = "1.5.0"
+}
+
+variable "ack_iam_controller_policy" {
+  type = string
+  default = ""
+}
+
+variable "ack_s3_controller_version" {
+  type = string
+  default = "1.1.0"
+}
+
+variable "ack_s3_controller_policy" {
+  type = string
+  default = ""
+}
+
+variable "turn_off_cluster_at_night" {
+  type = bool
+  default = false
+}
+
+variable "turn_off_cluster_at_night_time_zone" {
+  type = string
+  default = "UTC"
+}
+
+variable "turn_off_master_at_night_recurrence" {
+  type = string
+  default = ""
+}
+
+variable "turn_off_nodes_at_night_recurrence" {
+  type = string
+  default = ""
+}

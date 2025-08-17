@@ -37,6 +37,14 @@ locals {
   kubernetes_node_group = "node-general"
   oidc_provider_discovery_bucket = format("%s-%s-%s-irsa-discovery-%s", local.aws_account_id, local.aws_region, local.project, local.environment)
 
+  master_asg = format("%s.masters.%s", local.kubernetes_master_group, local.cluster_name)
+  node_asg = format("%s.%s", local.kubernetes_node_group, local.cluster_name)
+
+  ack_namespace = "ack-system"
+  ack_iam_controller_name = "ack-iam-controller"
+  ack_s3_controller_name = "ack-s3-controller"
+
+
   tags = {
     Environment = local.environment
     Region = local.aws_region
@@ -139,6 +147,28 @@ resource "kops_cluster" "cluster" {
   iam {
     allow_container_registry = true
     use_service_account_external_permissions = var.enable_irsa
+
+    dynamic "service_account_external_permissions" {
+      for_each = var.enable_ack_controller ? [1] : []
+        content {
+          name = local.ack_iam_controller_name
+          namespace = local.ack_namespace
+          aws{
+            policy_ar_ns = [var.ack_iam_controller_policy]
+          }
+      }
+    }
+
+    dynamic "service_account_external_permissions" {
+      for_each = var.enable_ack_controller ? [1] : []
+        content {
+          name = local.ack_s3_controller_name
+          namespace = local.ack_namespace
+          aws{
+            policy_ar_ns = [var.ack_s3_controller_policy]
+          }
+      }
+    }
   }
 
   service_account_issuer_discovery {
@@ -349,6 +379,83 @@ resource "kops_cluster_updater" "updater" {
     kops_instance_group.master,
     kops_instance_group.node_general
   ]
+}
+
+resource "aws_autoscaling_schedule" "turn_off_master_at_night" {
+  count = var.turn_off_cluster_at_night ? 1 : 0
+
+  autoscaling_group_name = local.master_asg
+  scheduled_action_name = format("%s-turn-off", local.master_asg)
+  recurrence = var.turn_off_master_at_night_recurrence
+  time_zone = var.turn_off_cluster_at_night_time_zone
+  min_size = 0
+  max_size = 1
+  desired_capacity = 0
+
+  depends_on = [ kops_cluster_updater.updater ]
+}
+
+resource "aws_autoscaling_schedule" "turn_off_nodes_at_night" {
+  count = var.turn_off_cluster_at_night ? 1 : 0
+
+  autoscaling_group_name = local.node_asg
+  scheduled_action_name = format("%s-turn-off", local.node_asg)
+  recurrence = var.turn_off_nodes_at_night_recurrence
+  time_zone = var.turn_off_cluster_at_night_time_zone
+  min_size = 0
+  max_size = 3
+  desired_capacity = 0
+
+  depends_on = [ kops_cluster_updater.updater ]
+}
+
+resource "helm_release" "ack_iam_controller" {
+  count = var.enable_ack_controller ? 1 : 0
+
+  name       = local.ack_iam_controller_name
+  repository = "oci://public.ecr.aws/aws-controllers-k8s"
+  chart      = "iam-chart"
+  version    = var.ack_iam_controller_version
+  namespace = local.ack_namespace
+  create_namespace = true
+
+  set = [{
+    name = "aws.region"
+    value = local.aws_region
+  }]
+
+  depends_on = [ kops_cluster_updater.updater ]
+}
+
+resource "helm_release" "ack_s3_controller" {
+  count = var.enable_ack_controller ? 1 : 0
+
+  name       = local.ack_s3_controller_name
+  repository = "oci://public.ecr.aws/aws-controllers-k8s"
+  chart      = "s3-chart"
+  version    = var.ack_s3_controller_version
+  namespace = local.ack_namespace
+  create_namespace = true
+
+  set = [{
+    name = "aws.region"
+    value = local.aws_region
+  }]
+
+  depends_on = [ kops_cluster_updater.updater ]
+}
+
+resource "helm_release" "rabbitmq_operator" {
+  count = var.enable_rabbitmq_operator ? 1 : 0
+
+  name       = "rabbitmq-operator"
+  repository = "https://charts.bitnami.com/bitnami"
+  chart      = "rabbitmq-cluster-operator"
+  version    = var.rabbitmq_operator_version
+  namespace = "rabbitmq-system"
+  create_namespace = true
+
+  depends_on = [ kops_cluster_updater.updater ]
 }
 
 data "kops_kube_config" "kube_config" {

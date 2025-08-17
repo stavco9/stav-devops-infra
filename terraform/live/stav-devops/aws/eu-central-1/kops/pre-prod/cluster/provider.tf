@@ -8,6 +8,10 @@ terraform {
       source = "terraform-kops/kops"
       version = "1.32.0"
     }
+    helm = {
+      source = "hashicorp/helm"
+      version = "3.0.2"
+    }
   }
 
   backend "s3" {
@@ -32,5 +36,11 @@ provider "kops" {
   aws {
     profile = "stav-devops"
     region = "eu-central-1"
+  }
+}
+
+provider "helm" {
+  kubernetes = {
+    config_path = "~/.kube/config"
   }
 }

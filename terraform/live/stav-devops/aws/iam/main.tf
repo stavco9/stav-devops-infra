@@ -8,6 +8,14 @@ data "http" "load_balancer_controller_policy" {
   url = "https://raw.githubusercontent.com/kubernetes-sigs/aws-load-balancer-controller/v2.1.2/docs/install/iam_policy.json"
 }
 
+data "http" "ack_controller_management_iam_policy" {
+  url = "https://raw.githubusercontent.com/aws-controllers-k8s/iam-controller/main/config/iam/recommended-inline-policy"
+}
+
+data "http" "ack_controller_s3_policy" {
+  url = "https://raw.githubusercontent.com/aws-controllers-k8s/s3-controller/main/config/iam/recommended-inline-policy"
+}
+
 resource "aws_iam_user" "ecr_pusher" {
   name = local.ecr_pusher_user
 }
@@ -46,4 +54,14 @@ resource "aws_iam_policy" "external_dns_policy" {
 resource "aws_iam_policy" "kubernetes_karpenter_policy" {
   name = "KubernetesKarpenterPolicy"
   policy = file("./karpenter-permissions.json")
+}
+
+resource "aws_iam_policy" "ack_controller_management_iam_policy" {
+  name = "ACKControllerManagementIAMPolicy"
+  policy = data.http.ack_controller_management_iam_policy.response_body
+}
+
+resource "aws_iam_policy" "ack_controller_s3_policy" {
+  name = "ACKControllerS3Policy"
+  policy = data.http.ack_controller_s3_policy.response_body
 }

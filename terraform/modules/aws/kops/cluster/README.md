@@ -17,6 +17,18 @@ This module provisions a Kubernetes cluster on AWS via kOps. It configures a pub
 - `kube_api_server.kubelet_preferred_address_types` prefers InternalDNS/InternalIP to avoid unresolved hostnames
 - Rolling updates using `kops_cluster_updater` with validation gates
 
+### Kubernetes Add-ons (optional)
+- **ACK Controllers**: AWS Controllers for Kubernetes (IAM and S3) via Helm charts
+  - IAM controller: manages AWS IAM resources from Kubernetes
+  - S3 controller: manages S3 buckets and objects from Kubernetes
+  - Requires IRSA with appropriate IAM policies
+- **RabbitMQ Operator**: Bitnami RabbitMQ Cluster Operator for managing RabbitMQ clusters
+  - Installs in `rabbitmq-system` namespace
+  - Enables custom resources for RabbitMQ cluster management
+- **Autoscaling Schedules**: Optional night-time cluster shutdown for cost optimization
+  - Configurable timezone and recurrence patterns
+  - Sets ASG desired capacity to 0 during off-hours
+
 ### Inputs (high level)
 - `project`, `environment`
 - `vpc_id`, `public_subnet_ids`, `private_subnet_ids`
@@ -28,6 +40,9 @@ This module provisions a Kubernetes cluster on AWS via kOps. It configures a pub
   - `enable_aws_load_balancer_controller` (bool)
   - `enable_karpenter` (bool)
   - `enable_pod_identity_webhook` (bool)
+  - `enable_ack_controller` (bool) - ACK IAM and S3 controllers
+  - `enable_rabbitmq_operator` (bool) - RabbitMQ Cluster Operator
+  - `turn_off_cluster_at_night` (bool) - Night-time shutdown schedules
 
 ### Outputs
 - `cluster_kubeconfig` (sensitive): server/context/user details to access the cluster
@@ -67,6 +82,11 @@ module "kops_cluster" {
   enable_aws_load_balancer_controller = true
   enable_karpenter                    = false
   enable_pod_identity_webhook         = false
+  
+  # Optional add-ons
+  enable_ack_controller               = false
+  enable_rabbitmq_operator            = false
+  turn_off_cluster_at_night           = false
 }
 ```
 
@@ -76,3 +96,8 @@ After apply, validate cluster health and export kubeconfig as needed:
 kops validate cluster --name <cluster-name> --state s3://<kops-state-bucket>
 kops export kubeconfig --name <cluster-name> --state s3://<kops-state-bucket> --admin
 ```
+
+### Add-on Configuration Notes
+- **ACK Controllers**: When enabled, ensure the IAM policies (`ack_iam_controller_policy`, `ack_s3_controller_policy`) are provided and IRSA is enabled
+- **RabbitMQ Operator**: Installs the operator only; RabbitMQ clusters are created separately using the operator's custom resources
+- **Night-time Shutdown**: Use with caution in production; ensure applications can handle graceful shutdowns and restarts
