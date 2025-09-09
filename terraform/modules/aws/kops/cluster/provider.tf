@@ -7,12 +7,17 @@ terraform {
 
     kops = {
       source = "terraform-kops/kops"
-      version = "1.32.0"
+      version = "1.33.2"
     }
 
     helm = {
       source = "hashicorp/helm"
       version = "3.0.2"
+    }
+
+    kubernetes = {
+      source = "hashicorp/kubernetes"
+      version = "2.38.0"
     }
   }
 }

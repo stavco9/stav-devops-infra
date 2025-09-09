@@ -25,6 +25,17 @@ This module provisions a Kubernetes cluster on AWS via kOps. It configures a pub
 - **RabbitMQ Operator**: Bitnami RabbitMQ Cluster Operator for managing RabbitMQ clusters
   - Installs in `rabbitmq-system` namespace
   - Enables custom resources for RabbitMQ cluster management
+- **Cert-Manager**: Automatic TLS certificate management
+  - Installs Let's Encrypt cluster issuer for automatic certificate provisioning
+  - Supports ACME protocol for certificate automation
+- **Nginx Ingress Controller**: Alternative ingress controller for HTTP/HTTPS routing
+  - Provides LoadBalancer service with AWS NLB integration
+  - Configurable for internet-facing or internal load balancing
+  - Works alongside AWS Load Balancer Controller
+- **External-DNS**: Automatic DNS record management
+  - Integrates with Route53 for automatic DNS record creation
+  - Watches Ingress and Service resources for hostname management
+  - Supports multiple DNS providers
 - **Autoscaling Schedules**: Optional night-time cluster shutdown for cost optimization
   - Configurable timezone and recurrence patterns
   - Sets ASG desired capacity to 0 during off-hours
@@ -42,6 +53,8 @@ This module provisions a Kubernetes cluster on AWS via kOps. It configures a pub
   - `enable_pod_identity_webhook` (bool)
   - `enable_ack_controller` (bool) - ACK IAM and S3 controllers
   - `enable_rabbitmq_operator` (bool) - RabbitMQ Cluster Operator
+  - `enable_nginx_ingress_controller` (bool) - Nginx Ingress Controller
+  - `enable_external_dns` (bool) - External-DNS for automatic DNS management
   - `turn_off_cluster_at_night` (bool) - Night-time shutdown schedules
 
 ### Outputs
@@ -55,8 +68,11 @@ You may also need to relax account-level “Block Public ACLs” for this specif
 
 ### DNS responsibilities and ingress hostnames
 - kOps dns-controller (enabled here via `external_dns { provider = "dns-controller" }`) creates internal cluster DNS records (api, etcd, kops-controller).
-- Application hostnames are managed by external-dns, which watches your Ingress/Service resources and creates Route53 records that point to ALB/NLB provisioned by the AWS Load Balancer Controller.
+- Application hostnames are managed by external-dns, which watches your Ingress/Service resources and creates Route53 records that point to ALB/NLB provisioned by the AWS Load Balancer Controller or Nginx Ingress Controller.
   - Setup guide for external-dns with the AWS Load Balancer Controller: https://kubernetes-sigs.github.io/aws-load-balancer-controller/v2.1/guide/integrations/external_dns/
+- **Ingress Controllers**: The module supports both AWS Load Balancer Controller (ALB/NLB) and Nginx Ingress Controller (NLB) for different use cases:
+  - AWS Load Balancer Controller: Best for AWS-native load balancing with advanced features
+  - Nginx Ingress Controller: Alternative for standard HTTP/HTTPS routing with NLB backend
 
 ### Usage sketch
 Reference the module from your live stack and provide the networking, IAM, and feature flags:
@@ -86,6 +102,8 @@ module "kops_cluster" {
   # Optional add-ons
   enable_ack_controller               = false
   enable_rabbitmq_operator            = false
+  enable_nginx_ingress_controller     = false
+  enable_external_dns                 = false
   turn_off_cluster_at_night           = false
 }
 ```
@@ -100,4 +118,7 @@ kops export kubeconfig --name <cluster-name> --state s3://<kops-state-bucket> --
 ### Add-on Configuration Notes
 - **ACK Controllers**: When enabled, ensure the IAM policies (`ack_iam_controller_policy`, `ack_s3_controller_policy`) are provided and IRSA is enabled
 - **RabbitMQ Operator**: Installs the operator only; RabbitMQ clusters are created separately using the operator's custom resources
+- **Cert-Manager**: Automatically installs Let's Encrypt cluster issuer; requires DNS validation for certificate issuance
+- **Nginx Ingress Controller**: Creates a LoadBalancer service with AWS NLB; configure annotations for internet-facing or internal access
+- **External-DNS**: Requires Route53 permissions; automatically creates DNS records for Ingress and Service resources with appropriate annotations
 - **Night-time Shutdown**: Use with caution in production; ensure applications can handle graceful shutdowns and restarts

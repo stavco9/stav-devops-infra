@@ -92,6 +92,26 @@ variable "enable_rabbitmq_operator" {
   default = false
 }
 
+variable "enable_argocd" {
+  type = bool
+  default = false
+}
+
+variable "enable_prometheus_operator" {
+  type = bool
+  default = false
+}
+
+variable "enable_nginx_ingress_controller" {
+  type = bool
+  default = false
+}
+
+variable "enable_external_dns" {
+  type = bool
+  default = false
+}
+
 variable "rabbitmq_operator_version" {
   type = string
   default = "4.4.32"
@@ -100,6 +120,16 @@ variable "rabbitmq_operator_version" {
 variable "ack_iam_controller_version" {
   type = string
   default = "1.5.0"
+}
+
+variable "argocd_version" {
+  type = string
+  default = "8.3.0"
+}
+
+variable "prometheus_operator_version" {
+  type = string
+  default = "77.5.0"
 }
 
 variable "ack_iam_controller_policy" {
@@ -115,6 +145,31 @@ variable "ack_s3_controller_version" {
 variable "ack_s3_controller_policy" {
   type = string
   default = ""
+}
+
+variable "aws_load_balancer_controller_version" {
+  type = string
+  default = "1.13.4"
+}
+
+variable "aws_load_balancer_controller_policy" {
+  type = string
+  default = ""
+}
+
+variable "external_dns_version" {
+  type = string
+  default = "1.19.0"
+}
+
+variable "external_dns_policy" {
+  type = string
+  default = ""
+}
+
+variable "nginx_ingress_controller_version" {
+  type = string
+  default = "4.13.2"
 }
 
 variable "turn_off_cluster_at_night" {

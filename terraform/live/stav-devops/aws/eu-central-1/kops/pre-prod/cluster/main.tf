@@ -56,7 +56,7 @@ module "kops_cluster" {
   
    project = local.project
    environment = local.environment
-   kubernetes_version = "1.32.0"
+   kubernetes_version = "1.33.2"
 
    vpc_id = data.terraform_remote_state.networking.outputs.vpc_id
    public_subnet_ids = data.terraform_remote_state.networking.outputs.public_subnet_ids
@@ -70,7 +70,7 @@ module "kops_cluster" {
 
    cluster_admin_iam_roles = ["arn:aws:iam::882709358319:role/aws-reserved/sso.amazonaws.com/AWSReservedSSO_AdministratorAccess_eeb2dd0cf1e87c29"]
 
-   ec2_instance_type = "t3.small"
+   ec2_instance_type = "t3a.medium"
 
    dns_zone = "stavco9.com"
 
@@ -81,12 +81,23 @@ module "kops_cluster" {
    enable_pod_identity_webhook = true
    enable_ack_controller = true
    enable_rabbitmq_operator = true
+   enable_prometheus_operator = true
+   enable_argocd = true
+   enable_nginx_ingress_controller = true
+   enable_external_dns = true
 
    ack_iam_controller_policy = data.terraform_remote_state.iam.outputs.ack_iam_controller_policy
    ack_iam_controller_version = "1.5.0"
    ack_s3_controller_policy = data.terraform_remote_state.iam.outputs.ack_s3_controller_policy
    ack_s3_controller_version = "1.1.0"
+   aws_load_balancer_controller_policy = data.terraform_remote_state.iam.outputs.aws_load_balancer_controller_policy
+   aws_load_balancer_controller_version = "1.13.4"
    rabbitmq_operator_version = "4.4.32"
+   prometheus_operator_version = "77.5.0"
+   argocd_version = "8.3.5"
+   nginx_ingress_controller_version = "4.13.2"
+   external_dns_version = "1.19.0"
+   external_dns_policy = data.terraform_remote_state.iam.outputs.external_dns_policy
 
    turn_off_cluster_at_night = true
    turn_off_cluster_at_night_time_zone = "Asia/Jerusalem"

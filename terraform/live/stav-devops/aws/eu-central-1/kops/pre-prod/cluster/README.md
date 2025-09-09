@@ -14,6 +14,9 @@ This live stack provisions a complete Kubernetes cluster with the following comp
 - **Pod Identity Webhook** for AWS Pod Identity
 - **ACK Controllers** (IAM and S3) for managing AWS resources from Kubernetes
 - **RabbitMQ Operator** for RabbitMQ cluster management
+- **Cert-Manager** with Let's Encrypt cluster issuer for automatic TLS certificates
+- **Nginx Ingress Controller** as alternative ingress solution with AWS NLB
+- **External-DNS** for automatic Route53 DNS record management
 - **Night-time shutdown schedules** for cost optimization (Asia/Jerusalem timezone)
 
 ## Prerequisites
@@ -84,6 +87,8 @@ All Kubernetes add-ons are enabled by default in this environment:
 - `enable_pod_identity_webhook = true` - AWS Pod Identity
 - `enable_ack_controller = true` - ACK IAM and S3 controllers
 - `enable_rabbitmq_operator = true` - RabbitMQ Cluster Operator
+- `enable_nginx_ingress_controller = true` - Nginx Ingress Controller with AWS NLB
+- `enable_external_dns = true` - External-DNS for automatic DNS management
 
 ### Cost Optimization
 
@@ -97,6 +102,15 @@ Night-time shutdown is enabled to reduce costs:
 - **Internal cluster DNS**: CoreDNS + kOps dns-controller
 - **External DNS zone**: `stavco9.com`
 - **API endpoint**: `api.k8s.stav-devops.eu-central-1.pre-prod.stavco9.com`
+- **Application DNS**: External-DNS automatically creates Route53 records for Ingress resources
+- **Certificate management**: Cert-Manager with Let's Encrypt for automatic TLS certificates
+
+### Ingress Configuration
+
+The cluster supports multiple ingress controllers:
+- **AWS Load Balancer Controller**: For AWS-native ALB/NLB with advanced features
+- **Nginx Ingress Controller**: Alternative solution with AWS NLB backend
+- **ArgoCD**: Configured to use Nginx Ingress with automatic DNS and TLS certificates
 
 ## IRSA Discovery Bucket
 
@@ -138,8 +152,12 @@ kops get ig --state s3://882709358319-eu-central-1-stav-devops-kops-state-pre-pr
 # View logs for specific components
 kubectl logs -n kube-system deployment/aws-load-balancer-controller
 kubectl logs -n kube-system deployment/karpenter
+kubectl logs -n kube-system deployment/nginx-ingress-controller
+kubectl logs -n kube-system deployment/external-dns
+kubectl logs -n cert-manager deployment/cert-manager
 ```
 
 ## Outputs
 
 - `cluster_kubeconfig` - Kubernetes configuration for cluster access
+

@@ -4,10 +4,6 @@ locals {
   ecr_pusher_user = "Stav-DevOps-ECR-Pusher"
 }
 
-data "http" "load_balancer_controller_policy" {
-  url = "https://raw.githubusercontent.com/kubernetes-sigs/aws-load-balancer-controller/v2.1.2/docs/install/iam_policy.json"
-}
-
 data "http" "ack_controller_management_iam_policy" {
   url = "https://raw.githubusercontent.com/aws-controllers-k8s/iam-controller/main/config/iam/recommended-inline-policy"
 }
@@ -43,7 +39,7 @@ resource "aws_secretsmanager_secret_version" "ecr_pusher" {
 
 resource "aws_iam_policy" "load_balancer_controller_policy" {
   name = "AWSLoadBalancerControllerIAMPolicy"
-  policy = data.http.load_balancer_controller_policy.response_body
+  policy = file("./aws-load-balancer-permissions.json")
 }
 
 resource "aws_iam_policy" "external_dns_policy" {

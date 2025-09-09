@@ -27,3 +27,4 @@ terraform import "module.kops_state_bucket.module.s3_bucket.aws_s3_bucket.this[0
 - `public_key_path`: path to the generated SSH public key
 
 
+

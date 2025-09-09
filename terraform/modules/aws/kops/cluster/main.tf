@@ -1,140 +1,3 @@
-locals {
-  project = var.project
-  environment = var.environment
-  vpc_id = var.vpc_id
-  private_subnet_ids = var.private_subnet_ids
-  public_subnet_ids = var.public_subnet_ids
-  aws_region = data.aws_region.region.name
-  aws_account_id = data.aws_caller_identity.account_id.account_id
-  private_subnets = [ for i, v in local.private_subnet_ids :
-    {
-        "subnet_id" = v,
-        "az_name" = data.aws_subnet.private_subnets[v].availability_zone
-        "name" = lookup(data.aws_subnet.private_subnets[v].tags, "Name", v)
-    }
-  ]
-  public_subnets = [ for i, v in local.public_subnet_ids :
-    {
-        "subnet_id" = v,
-        "az_name" = data.aws_subnet.public_subnets[v].availability_zone
-        "name" = lookup(data.aws_subnet.public_subnets[v].tags, "Name", v)
-    }
-  ]
-  private_subnet_names = [ for s in local.private_subnets : "${s.name}-${s.az_name}" ]
-  public_subnet_names  = [ for s in local.public_subnets  : "${s.name}-${s.az_name}" ]
-  all_subnets = concat(local.private_subnets, local.public_subnets)
-  cluster_name = format("k8s.%s.%s.%s.%s", local.project, local.aws_region, local.environment, local.dns_zone_name)
-  dns_zone_name  = var.dns_zone
-  cluster_project = var.project
-  dns_zone_id = data.aws_route53_zone.dns_zone.zone_id
-  instance_type = var.ec2_instance_type
-  master_volume_size = var.master_volume_size
-  node_volume_size = var.node_volume_size
-  public_key_file_path = var.public_key_file_path
-  kubernetes_version = var.kubernetes_version
-
-  kubernetes_master_group = "master"
-  kubernetes_node_group = "node-general"
-  oidc_provider_discovery_bucket = format("%s-%s-%s-irsa-discovery-%s", local.aws_account_id, local.aws_region, local.project, local.environment)
-
-  master_asg = format("%s.masters.%s", local.kubernetes_master_group, local.cluster_name)
-  node_asg = format("%s.%s", local.kubernetes_node_group, local.cluster_name)
-
-  ack_namespace = "ack-system"
-  ack_iam_controller_name = "ack-iam-controller"
-  ack_s3_controller_name = "ack-s3-controller"
-
-
-  tags = {
-    Environment = local.environment
-    Region = local.aws_region
-    Project = local.project
-    Owner = local.project
-    ManagedBy = "terraform"
-    Cluster = local.cluster_name
-  }
-}
-
-data "aws_route53_zone" "dns_zone" {
-  name         = local.dns_zone_name
-  private_zone = false
-}
-
-data "aws_subnet" "private_subnets" {
-  for_each = toset(local.private_subnet_ids)
-  id       = each.value
-}
-
-data "aws_subnet" "public_subnets" {
-  for_each = toset(local.public_subnet_ids)
-  id       = each.value
-}
-
-data "aws_caller_identity" "account_id" { }
-
-data "aws_region" "region" { }
-
-module "oidc_provider_discovery_bucket" {
-  source = "terraform-aws-modules/s3-bucket/aws"
-
-  bucket = local.oidc_provider_discovery_bucket
-  #acl    = "private"
-
-  control_object_ownership = true
-  object_ownership         = "ObjectWriter"
-
-  attach_public_policy = false
-  block_public_acls = false
-  block_public_policy = false
-  ignore_public_acls = false
-  restrict_public_buckets = false
-
-  versioning = {
-    enabled = true
-  }
-
-  tags = merge(local.tags, {
-    Name = local.oidc_provider_discovery_bucket
-  })
-}
-
-### DNS Zone
-
-resource "aws_acm_certificate" "master_cert" {
-  domain_name       = "api.${local.cluster_name}"
-  validation_method = "DNS"
-
-  lifecycle {
-    create_before_destroy = true
-  }
-
-  tags = merge(local.tags, {
-    Name = "api.${local.cluster_name}"
-  })
-}
-
-resource "aws_route53_record" "master_cert_validate" {
-  for_each = {
-    for dvo in aws_acm_certificate.master_cert.domain_validation_options : dvo.domain_name => {
-      name   = dvo.resource_record_name
-      record = dvo.resource_record_value
-      type   = dvo.resource_record_type
-    }
-  }
-
-  allow_overwrite = true
-  name            = each.value.name
-  records         = [each.value.record]
-  ttl             = 60
-  type            = each.value.type
-  zone_id         = local.dns_zone_id
-}
-
-resource "aws_acm_certificate_validation" "master_cert_validate" {
-  certificate_arn         = aws_acm_certificate.master_cert.arn
-  validation_record_fqdns = [for record in aws_route53_record.master_cert_validate : record.fqdn]
-}
-
 ## Kops Cluster
 
 resource "kops_cluster" "cluster" {
@@ -169,6 +32,28 @@ resource "kops_cluster" "cluster" {
           }
       }
     }
+
+    dynamic "service_account_external_permissions" {
+      for_each = var.enable_aws_load_balancer_controller ? [1] : []
+        content {
+          name = local.aws_load_balancer_controller_name
+          namespace = "kube-system"
+          aws{
+            policy_ar_ns = [var.aws_load_balancer_controller_policy]
+          }
+      }
+    }
+
+    dynamic "service_account_external_permissions" {
+      for_each = var.enable_external_dns ? [1] : []
+        content {
+          name = local.external_dns_name
+          namespace = "kube-system"
+          aws{
+            policy_ar_ns = [var.external_dns_policy]
+          }
+      }
+    }
   }
 
   service_account_issuer_discovery {
@@ -178,10 +63,6 @@ resource "kops_cluster" "cluster" {
 
   karpenter {
     enabled = var.enable_karpenter
-  }
-
-  kube_api_server {
-    kubelet_preferred_address_types = [ "InternalDNS", "InternalIP", "Hostname", "ExternalDNS", "ExternalIP" ]
   }
 
   networking {
@@ -288,7 +169,7 @@ resource "kops_cluster" "cluster" {
       }
 
       load_balancer_controller {
-        enabled = var.enable_aws_load_balancer_controller
+        enabled = false ## Install separately via helm chart due to issues with kOpsq
       }
 
       pod_identity_webhook {
@@ -334,6 +215,11 @@ resource "kops_instance_group" "master" {
     size = local.master_volume_size
     type = "gp3"
   }
+  
+  instance_metadata {
+    http_tokens = "optional"
+  }
+  
   depends_on   = [kops_cluster.cluster]
 }
 
@@ -350,6 +236,11 @@ resource "kops_instance_group" "node_general" {
     size = local.node_volume_size
     type = "gp3"
   }
+  
+  instance_metadata {
+    http_tokens = "optional"
+  }
+  
   depends_on   = [kops_cluster.cluster]
 }
 
@@ -379,85 +270,4 @@ resource "kops_cluster_updater" "updater" {
     kops_instance_group.master,
     kops_instance_group.node_general
   ]
-}
-
-resource "aws_autoscaling_schedule" "turn_off_master_at_night" {
-  count = var.turn_off_cluster_at_night ? 1 : 0
-
-  autoscaling_group_name = local.master_asg
-  scheduled_action_name = format("%s-turn-off", local.master_asg)
-  recurrence = var.turn_off_master_at_night_recurrence
-  time_zone = var.turn_off_cluster_at_night_time_zone
-  min_size = 0
-  max_size = 1
-  desired_capacity = 0
-
-  depends_on = [ kops_cluster_updater.updater ]
-}
-
-resource "aws_autoscaling_schedule" "turn_off_nodes_at_night" {
-  count = var.turn_off_cluster_at_night ? 1 : 0
-
-  autoscaling_group_name = local.node_asg
-  scheduled_action_name = format("%s-turn-off", local.node_asg)
-  recurrence = var.turn_off_nodes_at_night_recurrence
-  time_zone = var.turn_off_cluster_at_night_time_zone
-  min_size = 0
-  max_size = 3
-  desired_capacity = 0
-
-  depends_on = [ kops_cluster_updater.updater ]
-}
-
-resource "helm_release" "ack_iam_controller" {
-  count = var.enable_ack_controller ? 1 : 0
-
-  name       = local.ack_iam_controller_name
-  repository = "oci://public.ecr.aws/aws-controllers-k8s"
-  chart      = "iam-chart"
-  version    = var.ack_iam_controller_version
-  namespace = local.ack_namespace
-  create_namespace = true
-
-  set = [{
-    name = "aws.region"
-    value = local.aws_region
-  }]
-
-  depends_on = [ kops_cluster_updater.updater ]
-}
-
-resource "helm_release" "ack_s3_controller" {
-  count = var.enable_ack_controller ? 1 : 0
-
-  name       = local.ack_s3_controller_name
-  repository = "oci://public.ecr.aws/aws-controllers-k8s"
-  chart      = "s3-chart"
-  version    = var.ack_s3_controller_version
-  namespace = local.ack_namespace
-  create_namespace = true
-
-  set = [{
-    name = "aws.region"
-    value = local.aws_region
-  }]
-
-  depends_on = [ kops_cluster_updater.updater ]
-}
-
-resource "helm_release" "rabbitmq_operator" {
-  count = var.enable_rabbitmq_operator ? 1 : 0
-
-  name       = "rabbitmq-operator"
-  repository = "https://charts.bitnami.com/bitnami"
-  chart      = "rabbitmq-cluster-operator"
-  version    = var.rabbitmq_operator_version
-  namespace = "rabbitmq-system"
-  create_namespace = true
-
-  depends_on = [ kops_cluster_updater.updater ]
-}
-
-data "kops_kube_config" "kube_config" {
-  cluster_name = kops_cluster.cluster.name
 }
