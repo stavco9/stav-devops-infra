@@ -8,3 +8,15 @@ output "cluster_kubeconfig" {
 
   sensitive = true
 }
+
+output "cluster_name" {
+  value = local.cluster_name
+}
+
+output "irsa_discovery_bucket_url" {
+  value = module.oidc_provider_discovery_bucket.s3_bucket_bucket_regional_domain_name
+}
+
+output "irsa_oidc_provider_arn" {
+  value = "arn:aws:iam::${local.aws_account_id}:oidc-provider/${module.oidc_provider_discovery_bucket.s3_bucket_bucket_regional_domain_name}"
+}

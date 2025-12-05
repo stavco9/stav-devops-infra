@@ -85,6 +85,9 @@ module "kops_cluster" {
    enable_argocd = true
    enable_nginx_ingress_controller = true
    enable_external_dns = true
+   enable_aws_secrets_manager_integration = true
+   enable_keda = true
+   enable_keda_http = true
 
    ack_iam_controller_policy = data.terraform_remote_state.iam.outputs.ack_iam_controller_policy
    ack_iam_controller_version = "1.5.0"
@@ -98,8 +101,12 @@ module "kops_cluster" {
    nginx_ingress_controller_version = "4.13.2"
    external_dns_version = "1.19.0"
    external_dns_policy = data.terraform_remote_state.iam.outputs.external_dns_policy
+   secrets_store_csi_driver_version = "1.5.3"
+   secrets_store_csi_driver_provider_aws_version = "2.0.0"
+   keda_version = "2.18.1"
+   keda_http_version = "0.11.1"
 
-   turn_off_cluster_at_night = true
+   turn_off_cluster_at_night = false
    turn_off_cluster_at_night_time_zone = "Asia/Jerusalem"
    turn_off_nodes_at_night_recurrence = "0 22 * * *"
    turn_off_master_at_night_recurrence = "0 23 * * *"

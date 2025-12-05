@@ -112,6 +112,30 @@ variable "enable_external_dns" {
   default = false
 }
 
+variable "enable_aws_secrets_manager_integration" {
+  type = bool
+  default = false
+}
+
+variable "enable_keda" {
+  type = bool
+  default = false
+}
+
+variable "enable_keda_http" {
+  type = bool
+  default = false
+}
+
+variable "custom_apps_iam_roles" {
+  type = list(object({
+    service_account_name = string
+    service_account_namespace = string
+    iam_policy_arns = list(string)
+  }))
+  default = []
+}
+
 variable "rabbitmq_operator_version" {
   type = string
   default = "4.4.32"
@@ -170,6 +194,26 @@ variable "external_dns_policy" {
 variable "nginx_ingress_controller_version" {
   type = string
   default = "4.13.2"
+}
+
+variable "secrets_store_csi_driver_version" {
+  type = string
+  default = "1.5.3"
+}
+
+variable "secrets_store_csi_driver_provider_aws_version" {
+  type = string
+  default = "2.0.0"
+}
+
+variable "keda_version" {
+  type = string
+  default = "2.18.1"
+}
+
+variable "keda_http_version" {
+  type = string
+  default = "0.11.1"
 }
 
 variable "turn_off_cluster_at_night" {

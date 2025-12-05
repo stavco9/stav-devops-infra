@@ -68,6 +68,37 @@ resource "helm_release" "ack_s3_controller" {
   depends_on = [ kops_cluster_updater.updater ]
 }
 
+resource "helm_release" "secrets_store_csi_driver" {
+  count = var.enable_aws_secrets_manager_integration ? 1 : 0
+  
+  name = "csi-secrets-store"
+  repository = "https://kubernetes-sigs.github.io/secrets-store-csi-driver/charts"
+  chart = "secrets-store-csi-driver"
+  version = var.secrets_store_csi_driver_version
+  namespace = "kube-system"
+  create_namespace = false
+
+  depends_on = [ kops_cluster_updater.updater ]
+}
+
+resource "helm_release" "secrets_store_csi_driver_provider_aws" {
+  count = var.enable_aws_secrets_manager_integration ? 1 : 0
+  
+  name = "secrets-provider-aws"
+  repository = "https://aws.github.io/secrets-store-csi-driver-provider-aws"
+  chart = "secrets-store-csi-driver-provider-aws"
+  version = var.secrets_store_csi_driver_provider_aws_version
+  namespace = "kube-system"
+  create_namespace = false
+
+  set = [{
+    name = "secrets-store-csi-driver.install"
+    value = false
+  }]
+
+  depends_on = [ kops_cluster_updater.updater, helm_release.secrets_store_csi_driver ]
+}
+
 resource "helm_release" "rabbitmq_operator" {
   count = var.enable_rabbitmq_operator ? 1 : 0
 
@@ -161,6 +192,32 @@ resource "helm_release" "external_dns" {
   }]
 
   depends_on = [ kops_cluster_updater.updater ]
+}
+
+resource "helm_release" "keda_core" {
+  count = var.enable_keda ? 1 : 0
+
+  name = "keda"
+  repository = "https://kedacore.github.io/charts"
+  chart = "keda"
+  version = var.keda_version
+  namespace = "keda"
+  create_namespace = true
+
+  depends_on = [ kops_cluster_updater.updater ]
+}
+
+resource "helm_release" "keda_http" {
+  count = var.enable_keda ? 1 : 0
+
+  name = "keda-http"
+  repository = "https://kedacore.github.io/charts"
+  chart = "keda-add-ons-http"
+  version = var.keda_http_version
+  namespace = "keda"
+  create_namespace = true
+
+  depends_on = [ kops_cluster_updater.updater, helm_release.keda_core ]
 }
 
 resource "helm_release" "argocd" {

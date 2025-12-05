@@ -54,6 +54,17 @@ resource "kops_cluster" "cluster" {
           }
       }
     }
+
+    dynamic "service_account_external_permissions" {
+      for_each = var.custom_apps_iam_roles
+        content {
+          name = service_account_external_permissions.value.service_account_name
+          namespace = service_account_external_permissions.value.service_account_namespace
+          aws{
+            policy_ar_ns = service_account_external_permissions.value.iam_policy_arns
+          }
+      }
+    }
   }
 
   service_account_issuer_discovery {
