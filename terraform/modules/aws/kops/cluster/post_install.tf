@@ -217,6 +217,14 @@ resource "helm_release" "keda_http" {
   namespace = "keda"
   create_namespace = true
 
+  set = [{
+    name = "interceptor.responseHeaderTimeout"
+    value = "10000ms"
+  }, {
+    name = "interceptor.tcpConnectTimeout"
+    value = "10000ms"
+  }]
+
   depends_on = [ kops_cluster_updater.updater, helm_release.keda_core ]
 }
 
